@@ -1,12 +1,3 @@
-// =============================================================================
-//	CFS_Sample 本体部
-//
-//					Filename: main.c
-//
-// =============================================================================
-//		Ver 1.0.0		2012/11/01
-// =============================================================================
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -17,19 +8,6 @@
 #include <geometry_msgs/WrenchStamped.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
-
-typedef struct{
-	double com[3];
-	double rfpos[3];
-	double lfpos[3];
-	double rhpos[3];
-	double lhpos[3];
-	double rfwrench[6];
-	double lfwrench[6];
-	double zmp[3];
-	bool startsync;
-}humanpose_t;
-humanpose_t humanpose;
 
 
 #include "pCommon.h"
@@ -79,18 +57,14 @@ int main(int argc, char *argv[]){
 		exit(1);
 	}
 
-
-
 	// ROS initialization
 	ros::init(argc, argv, "leptrino_reader");
 	ros::NodeHandle n;
 	ros::Rate loop_rate(1000);
 	ros::Publisher pub = n.advertise<geometry_msgs::WrenchStamped>("output", 1000);
-//	std::string devpath(argv[1]);
-    std::string devpath,frame_id;
+  std::string devpath,frame_id;
 	ros::param::get("~device_path", devpath);
 	ros::param::get("~foot_frame_id", frame_id);
-//	tfbr = new tf::TransformBroadcaster();
 	ROS_INFO("[leptrino_reader] ROS init OK [%s]",devpath.c_str());
 
 	int /*i,*/ l = 0, rt = 0;
@@ -101,7 +75,6 @@ int main(int argc, char *argv[]){
 	ST_RES_HEAD *stCmdHead;
 	ST_R_DATA_GET_F *stForce;
 	ST_R_GET_INF *stGetInfo;
-
 
 	const double realfactor[6] = {1000.0/10000.0, 1000.0/10000.0, 2000.0/10000.0, 300.0/10000.0, 300.0/10000.0, 300.0/10000.0};//±定格＝±10000
 
@@ -138,7 +111,6 @@ int main(int argc, char *argv[]){
 	
 	usleep(10000);
 	//初期化
-	memset(&humanpose,0,sizeof(humanpose_t));
 	double offset[6];
 	for(int i=0;i<6;i++)offset[i] = 0;
 	// 連続送信開始
@@ -167,53 +139,17 @@ int main(int argc, char *argv[]){
 					ROS_INFO_ONCE("[leptrino_reader] Start publishing [%s]",devpath.c_str());
 					stForce = (ST_R_DATA_GET_F *)CommRcvBuff;
 
-					const double F_H_OFFSET = 0.03;
-					const double rfpos[3] = {0,-0.1,-0.9},lfpos[3] = {0,0.1,-0.9};//高さ適当
-					double rfzmp[2],lfzmp[2],testzmp[2];
-
-					if( humanpose.rfwrench[2] > 1.0e-6 ){
-						rfzmp[0] = ( -humanpose.rfwrench[4] - humanpose.rfwrench[0] * F_H_OFFSET + humanpose.rfwrench[2] * 0 ) / humanpose.rfwrench[2];
-						rfzmp[1] = ( humanpose.rfwrench[3] - humanpose.rfwrench[1] * F_H_OFFSET + humanpose.rfwrench[2] * 0 ) / humanpose.rfwrench[2];
-						if(rfzmp[0] > 0.160)rfzmp[0] = 0.160;
-						if(rfzmp[0] < -0.100)rfzmp[0] = -0.100;
-						if(rfzmp[1] > 0.065)rfzmp[1] = 0.065;
-						if(rfzmp[1] < -0.065)rfzmp[1] = -0.065;
-					}
-					if( humanpose.lfwrench[2] > 1.0e-6 ){
-						lfzmp[0] = ( -humanpose.lfwrench[4] - humanpose.lfwrench[0] * F_H_OFFSET + humanpose.lfwrench[2] * 0 ) / humanpose.lfwrench[2];
-						lfzmp[1] = ( humanpose.lfwrench[3] - humanpose.lfwrench[1] * F_H_OFFSET + humanpose.lfwrench[2] * 0 ) / humanpose.lfwrench[2];
-						if(lfzmp[0] > 0.160)lfzmp[0] = 0.160;
-						if(lfzmp[0] < -0.100)lfzmp[0] = -0.100;
-						if(lfzmp[1] > 0.065)lfzmp[1] = 0.065;
-						if(lfzmp[1] < -0.065)lfzmp[1] = -0.065;
-					}
-					humanpose.zmp[0] = ( (rfzmp[0]+rfpos[0])*humanpose.rfwrench[2] + (lfzmp[0]+lfpos[0])*humanpose.lfwrench[2] ) / ( humanpose.rfwrench[2] + humanpose.lfwrench[2] );
-					humanpose.zmp[1] = ( (rfzmp[1]+rfpos[1])*humanpose.rfwrench[2] + (lfzmp[1]+lfpos[1])*humanpose.lfwrench[2] ) / ( humanpose.rfwrench[2] + humanpose.lfwrench[2] );
-					humanpose.zmp[2] = (rfpos[2] + lfpos[2])/2;//体幹から見たZMP高さ？
-					if( humanpose.rfwrench[2] < 10.0 && humanpose.lfwrench[2] < 10.0 ){humanpose.zmp[0]=0.0;humanpose.zmp[1]=0.0;humanpose.zmp[2]=0.0;}//両足10N以下はZMP計算しない
-
-//					humanpose.lfwrench[0] = -(stForce->ssForce[1]-offset[1]) * realfactor[1];//レプトリノは右X前Y上Z，普通のロボットは前X左Y上Z
-//					humanpose.lfwrench[1] = +(stForce->ssForce[0]-offset[0]) * realfactor[0];
-//					humanpose.lfwrench[2] = -(stForce->ssForce[2]-offset[2]) * realfactor[2];
-//					humanpose.lfwrench[3] = -(stForce->ssForce[4]-offset[4]) * realfactor[4];
-//					humanpose.lfwrench[4] = +(stForce->ssForce[3]-offset[3]) * realfactor[3];
-//					humanpose.lfwrench[5] = -(stForce->ssForce[5]-offset[5]) * realfactor[5];
-//					if (cnt%100 == 0) {
-//					printf("%ld:[L] %+06.1f,%+06.1f,%+06.1f,%+06.1f,%+06.1f,%+06.1f [R] %+06.1f,%+06.1f,%+06.1f,%+06.1f,%+06.1f,%+06.1f [ZMP] %+06.3f,%+06.3f\n",cnt,
-//							humanpose.lfwrench[0],humanpose.lfwrench[1],humanpose.lfwrench[2],humanpose.lfwrench[3],humanpose.lfwrench[4],humanpose.lfwrench[5],
-//							humanpose.rfwrench[0],humanpose.rfwrench[1],humanpose.rfwrench[2],humanpose.rfwrench[3],humanpose.rfwrench[4],humanpose.rfwrench[5],
-//							humanpose.zmp[0],humanpose.zmp[1]);
-//					}
-					pubdata.header.seq = pubdataseq++;
-					pubdata.header.stamp = ros::Time::now();
-					pubdata.header.frame_id =  frame_id;
-					pubdata.wrench.force.x  = -(stForce->ssForce[1]-offset[1]) * realfactor[1];
-					pubdata.wrench.force.y  = +(stForce->ssForce[0]-offset[0]) * realfactor[0];
-					pubdata.wrench.force.z  = -(stForce->ssForce[2]-offset[2]) * realfactor[2];
-					pubdata.wrench.torque.x = -(stForce->ssForce[4]-offset[4]) * realfactor[4];
-					pubdata.wrench.torque.y = +(stForce->ssForce[3]-offset[3]) * realfactor[3];
-					pubdata.wrench.torque.z = -(stForce->ssForce[5]-offset[5]) * realfactor[5];
-					pub.publish(pubdata);
+          const double FNUM = 0.1;
+          pubdata.header.seq = pubdataseq++;
+          pubdata.header.stamp = ros::Time::now();
+          pubdata.header.frame_id =  frame_id;
+          pubdata.wrench.force.x  = (1-FNUM)*pubdata.wrench.force.x  + FNUM*(-(stForce->ssForce[1]-offset[1]) * realfactor[1]);
+          pubdata.wrench.force.y  = (1-FNUM)*pubdata.wrench.force.y  + FNUM*(+(stForce->ssForce[0]-offset[0]) * realfactor[0]);
+          pubdata.wrench.force.z  = (1-FNUM)*pubdata.wrench.force.z  + FNUM*(-(stForce->ssForce[2]-offset[2]) * realfactor[2]);
+          pubdata.wrench.torque.x = (1-FNUM)*pubdata.wrench.torque.x + FNUM*(-(stForce->ssForce[4]-offset[4]) * realfactor[4]);
+          pubdata.wrench.torque.y = (1-FNUM)*pubdata.wrench.torque.y + FNUM*(+(stForce->ssForce[3]-offset[3]) * realfactor[3]);
+          pubdata.wrench.torque.z = (1-FNUM)*pubdata.wrench.torque.z + FNUM*(-(stForce->ssForce[5]-offset[5]) * realfactor[5]);
+          if(pubdataseq%10==0)pub.publish(pubdata);//センサ読み取りループは1000HzでもROSパブリッシュは100Hz程度にしておく(そのかわりフィルター)
 
 				}
 				ros::spinOnce();
@@ -253,8 +189,6 @@ void App_Init(const char *devpath)
 	
 	//Commポート初期化
 	gSys.com_ok = NG;
-/*	rt = Comm_Open("/dev/ttyACM0");*/
-/*	rt = Comm_Open("/dev/ttyUSB0");*/
 	rt = Comm_Open(devpath);
 	if ( rt==OK ) {
 		Comm_Setup( 460800, PAR_NON, BIT_LEN_8, 0, 0, CHR_ETX);
