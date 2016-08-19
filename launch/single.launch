@@ -1,0 +1,8 @@
+<launch>
+    <node name="leptrino_reader" pkg="leptrino_reader" type="leptrino_reader" required="true" output="screen">
+        <remap from="output" to="leptrino_single_test_output"/>
+        <param name="device_path" value="/dev/ttyUSB0" />
+        <param name="foot_frame_id" value="leptrino_single_test_cood" />
+    </node>
+</launch>
+

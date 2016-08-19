@@ -60,7 +60,7 @@ int main(int argc, char *argv[]){
   // ROS initialization
   ros::init(argc, argv, "leptrino_reader");
   ros::NodeHandle n;
-  ros::Rate loop_rate(1000);
+  ros::WallRate loop_rate(1000);
   ros::Publisher pub = n.advertise<geometry_msgs::WrenchStamped>("output", 1000);
   std::string devpath,frame_id;
   ros::param::get("~device_path", devpath);

@@ -1,12 +1,12 @@
 <launch>
-    <node name="R_foot_reader" pkg="leptrino_reader" type="leptrino_reader" args="/dev/ttyUSB0" required="true" output="screen">
+    <node name="R_foot_reader" pkg="leptrino_reader" type="leptrino_reader" required="true" output="screen">
         <remap from="output" to="human_tracker_rfw_ref"/>
-        <param name="device_path" value="/dev/ttyUSB0" />
+        <param name="device_path" value="/dev/Leptrino_R" />
         <param name="foot_frame_id" value="right_foot_wrench_cood" />
     </node>
-    <node name="L_foot_reader" pkg="leptrino_reader" type="leptrino_reader" args="/dev/ttyUSB1" required="true" output="screen">
+    <node name="L_foot_reader" pkg="leptrino_reader" type="leptrino_reader" required="true" output="screen">
         <remap from="output" to="human_tracker_lfw_ref"/>
-        <param name="device_path" value="/dev/ttyUSB1" />
+        <param name="device_path" value="/dev/Leptrino_L" />
         <param name="foot_frame_id" value="left_foot_wrench_cood" />
     </node>
 </launch>
