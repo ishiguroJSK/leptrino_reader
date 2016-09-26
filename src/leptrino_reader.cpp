@@ -62,6 +62,7 @@ int main(int argc, char *argv[]){
   ros::NodeHandle n;
   ros::WallRate loop_rate(1000);
   ros::Publisher pub = n.advertise<geometry_msgs::WrenchStamped>("output", 1000);
+  ros::Publisher pub_z = n.advertise<geometry_msgs::PointStamped>("output_zmp", 1000);
   std::string devpath,frame_id;
   ros::param::get("~device_path", devpath);
   ros::param::get("~foot_frame_id", frame_id);
@@ -119,6 +120,7 @@ int main(int argc, char *argv[]){
 
 
   geometry_msgs::WrenchStamped pubdata;
+  geometry_msgs::PointStamped pubdata_z;
   unsigned int pubdataseq = 0;
 
 
@@ -150,6 +152,12 @@ int main(int argc, char *argv[]){
           pubdata.wrench.torque.y = (1-FNUM)*pubdata.wrench.torque.y + FNUM*(+(stForce->ssForce[3]-offset[3]) * realfactor[3]);
           pubdata.wrench.torque.z = (1-FNUM)*pubdata.wrench.torque.z + FNUM*(-(stForce->ssForce[5]-offset[5]) * realfactor[5]);
           pub.publish(pubdata);
+
+          pubdata_z.header = pubdata.header;
+          const double F_H_OFFSET = 0.03;//地面から6軸センサ原点への高さ
+          pubdata_z.point.x = ( - pubdata.wrench.torque.y - pubdata.wrench.force.x * F_H_OFFSET + pubdata.wrench.force.z * 0 ) / pubdata.wrench.force.z;
+          pubdata_z.point.y = (   pubdata.wrench.torque.x - pubdata.wrench.force.y * F_H_OFFSET + pubdata.wrench.force.z * 0 ) / pubdata.wrench.force.z;
+          pub_z.publish(pubdata_z);
 
         }
         ros::spinOnce();

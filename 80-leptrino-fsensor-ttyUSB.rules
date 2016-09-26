@@ -1,2 +1,7 @@
+<<<<<<< Updated upstream
 ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTVVPI95" SYMLINK+="Leptrino_L", MODE="0777"
 ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTVVPHA3" SYMLINK+="Leptrino_R", MODE="0777"
+=======
+ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTVVPI95" SYMLINK+="Leptrino_L", MODE="0777" 
+ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="FTVVPHA3" SYMLINK+="Leptrino_R", MODE="0777" 
+>>>>>>> Stashed changes
